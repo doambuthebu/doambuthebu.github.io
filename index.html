@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Tetris</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>3D Tetris Game</title>
     <style>
         body {
             display: flex;
@@ -14,6 +14,7 @@
             background-color: #111;
             color: white;
             font-family: Arial, sans-serif;
+            touch-action: none;
         }
 
         canvas {
@@ -119,22 +120,11 @@
         }
 
         function drawBlock(x, y, color) {
-            const gradient = context.createLinearGradient(x, y, x + BLOCK_SIZE, y + BLOCK_SIZE);
-            gradient.addColorStop(0, color);
-            gradient.addColorStop(1, "darkgray");
-
-            context.fillStyle = gradient;
-            context.beginPath();
-            context.moveTo(x, y);
-            context.lineTo(x + BLOCK_SIZE, y);
-            context.lineTo(x + BLOCK_SIZE, y + BLOCK_SIZE);
-            context.lineTo(x, y + BLOCK_SIZE);
-            context.closePath();
-            context.fill();
-
+            context.fillStyle = color;
+            context.fillRect(x, y, BLOCK_SIZE, BLOCK_SIZE);
             context.strokeStyle = "black";
             context.lineWidth = 2;
-            context.stroke();
+            context.strokeRect(x, y, BLOCK_SIZE, BLOCK_SIZE);
         }
 
         function drawBoard() {
@@ -181,26 +171,9 @@
             score += linesCleared * 100;
         }
 
-        function collide() {
-            return piece.matrix.some((row, y) =>
-                row.some((value, x) =>
-                    value &&
-                    (board[piece.pos.y + y] && board[piece.pos.y + y][piece.pos.x + x]) !== 0
-                )
-            );
-        }
-
-        function isOutOfBounds() {
-            return (
-                piece.pos.x < 0 ||
-                piece.pos.x + piece.matrix[0].length > COLS ||
-                piece.pos.y + piece.matrix.length > ROWS
-            );
-        }
-
         function dropPiece() {
             piece.pos.y++;
-            if (collide() || isOutOfBounds()) {
+            if (collide()) {
                 piece.pos.y--;
                 mergeBoard();
                 if (piece.pos.y <= 0) {
@@ -216,7 +189,7 @@
             document.getElementById("gameOverScreen").style.display = "block";
         }
 
-        function update(time = 0) {
+        function update() {
             if (gameOver) return;
             dropPiece();
             drawBoard();
@@ -224,14 +197,25 @@
             setTimeout(() => requestAnimationFrame(update), 500);
         }
 
-        document.addEventListener("keydown", event => {
-            if (gameOver) return;
-            if (event.key === "ArrowLeft") piece.pos.x--;
-            else if (event.key === "ArrowRight") piece.pos.x++;
-            else if (event.key === "ArrowDown") dropPiece();
-            else if (event.key === "ArrowUp") {
-                const rotated = rotate(piece.matrix);
-                if (!collide() && !isOutOfBounds()) piece.matrix = rotated;
+        // Touch Controls
+        let startX, startY;
+        document.addEventListener("touchstart", (event) => {
+            startX = event.touches[0].clientX;
+            startY = event.touches[0].clientY;
+        });
+
+        document.addEventListener("touchend", (event) => {
+            const endX = event.changedTouches[0].clientX;
+            const endY = event.changedTouches[0].clientY;
+            const diffX = endX - startX;
+            const diffY = endY - startY;
+
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                if (diffX > 0) piece.pos.x++; // Swipe Right
+                else piece.pos.x--; // Swipe Left
+            } else {
+                if (diffY > 0) dropPiece(); // Swipe Down
+                else piece.matrix = rotate(piece.matrix); // Tap or Swipe Up to Rotate
             }
         });
 
