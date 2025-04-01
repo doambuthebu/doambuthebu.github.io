@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>3D Tetris Game</title>
+    <title>Tetris Game</title>
     <style>
         body {
             display: flex;
@@ -171,9 +171,17 @@
             score += linesCleared * 100;
         }
 
+        function isOutOfBounds() {
+            return (
+                piece.pos.x < 0 ||
+                piece.pos.x + piece.matrix[0].length > COLS ||
+                piece.pos.y + piece.matrix.length > ROWS
+            );
+        }
+
         function dropPiece() {
             piece.pos.y++;
-            if (collide()) {
+            if (isOutOfBounds()) {
                 piece.pos.y--;
                 mergeBoard();
                 if (piece.pos.y <= 0) {
@@ -181,6 +189,13 @@
                     return;
                 }
                 piece = createPiece();
+            }
+        }
+
+        function movePiece(dir) {
+            piece.pos.x += dir;
+            if (isOutOfBounds()) {
+                piece.pos.x -= dir; // Undo if it goes out of bounds
             }
         }
 
@@ -197,25 +212,14 @@
             setTimeout(() => requestAnimationFrame(update), 500);
         }
 
-        // Touch Controls
-        let startX, startY;
-        document.addEventListener("touchstart", (event) => {
-            startX = event.touches[0].clientX;
-            startY = event.touches[0].clientY;
-        });
-
-        document.addEventListener("touchend", (event) => {
-            const endX = event.changedTouches[0].clientX;
-            const endY = event.changedTouches[0].clientY;
-            const diffX = endX - startX;
-            const diffY = endY - startY;
-
-            if (Math.abs(diffX) > Math.abs(diffY)) {
-                if (diffX > 0) piece.pos.x++; // Swipe Right
-                else piece.pos.x--; // Swipe Left
-            } else {
-                if (diffY > 0) dropPiece(); // Swipe Down
-                else piece.matrix = rotate(piece.matrix); // Tap or Swipe Up to Rotate
+        document.addEventListener("keydown", event => {
+            if (gameOver) return;
+            if (event.key === "ArrowLeft") movePiece(-1);
+            else if (event.key === "ArrowRight") movePiece(1);
+            else if (event.key === "ArrowDown") dropPiece();
+            else if (event.key === "ArrowUp") {
+                const rotated = rotate(piece.matrix);
+                if (!isOutOfBounds()) piece.matrix = rotated;
             }
         });
 
