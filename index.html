@@ -190,9 +190,17 @@
             );
         }
 
+        function isOutOfBounds() {
+            return (
+                piece.pos.x < 0 ||
+                piece.pos.x + piece.matrix[0].length > COLS ||
+                piece.pos.y + piece.matrix.length > ROWS
+            );
+        }
+
         function dropPiece() {
             piece.pos.y++;
-            if (collide()) {
+            if (collide() || isOutOfBounds()) {
                 piece.pos.y--;
                 mergeBoard();
                 if (piece.pos.y <= 0) {
@@ -223,7 +231,7 @@
             else if (event.key === "ArrowDown") dropPiece();
             else if (event.key === "ArrowUp") {
                 const rotated = rotate(piece.matrix);
-                if (!collide()) piece.matrix = rotated;
+                if (!collide() && !isOutOfBounds()) piece.matrix = rotated;
             }
         });
 
