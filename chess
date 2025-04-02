@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Game</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+
+        .popup, .game-container, .end-screen {
+            display: none;
+            text-align: center;
+            animation: fadeIn 1s ease-out;
+        }
+
+        .popup {
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .popup input, .popup button {
+            margin: 10px;
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .popup button:hover {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        #board {
+            width: 600px;
+            height: 600px;
+            margin: auto;
+        }
+
+        #status, #move-history {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        #status {
+            margin-top: 10px;
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        .end-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .end-screen button {
+            margin: 10px;
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .end-screen button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Home Screen -->
+    <div id="popup" class="popup">
+        <h1>Welcome to Chess!</h1>
+        <label for="playerName">Enter your name:</label>
+        <input type="text" id="playerName" placeholder="Your Name">
+        <button id="startButton">Start Game</button>
+    </div>
+
+    <!-- Game Screen -->
+    <div class="game-container" id="gameContainer">
+        <h1 id="playerGreeting" style="text-align:center;"></h1>
+        <div id="board"></div>
+        <div id="status">White to move</div>
+        <div id="move-history">Move History: </div>
+        <button id="restartButton" style="display:none;">Restart Game</button>
+    </div>
+
+    <!-- End Screen -->
+    <div class="end-screen" id="endScreen">
+        <h1>Game Over</h1>
+        <div id="endMessage"></div>
+        <button onclick="showHomeScreen()">Go Back to Home</button>
+    </div>
+
+    <script>
+        var board;
+        var game = new Chess();
+        var playerName = "";
+
+        // Show home screen
+        function showHomeScreen() {
+            document.getElementById("popup").style.display = "flex";
+            document.getElementById("gameContainer").style.display = "none";
+            document.getElementById("endScreen").style.display = "none";
+        }
+
+        // Start the game
+        function startGame() {
+            playerName = document.getElementById("playerName").value.trim();
+            if (playerName === "") {
+                alert("Please enter a name.");
+                return;
+            }
+
+            document.getElementById("popup").style.display = "none";
+            document.getElementById("gameContainer").style.display = "block";
+            document.getElementById("endScreen").style.display = "none";
+            document.getElementById("playerGreeting").innerText = "Good luck, " + playerName + "!";
+            initializeBoard();
+        }
+
+        // Initialize the chessboard
+        function initializeBoard() {
+            board = Chessboard('board', {
+                draggable: true,
+                position: 'start',
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+                onDragStart: onDragStart,
+                onDrop: onDrop,
+                onSnapEnd: updatePosition
+            });
+        }
+
+        // Prevent invalid moves
+        function onDragStart(source, piece) {
+            if (game.game_over() || (game.turn() === 'w' && piece.search(/^b/) !== -1) || (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
+                return false;
+            }
+        }
+
+        // Handle piece drop and move
+        function onDrop(source, target) {
+            var move = game.move({ from: source, to: target, promotion: 'q' });
+            if (move === null) return 'snapback';
+            updatePosition();
+            checkGameStatus();
+        }
+
+        // Update the board and status after each move
+        function updatePosition() {
+            board.position(game.fen());
+            document.getElementById("status").innerText = game.turn() === 'w' ? "White to move" : "Black to move";
+        }
+
+        // Check if game is over
+        function checkGameStatus() {
+            if (game.game_over()) {
+                displayEndScreen();
+            }
+        }
+
+        // Display the end screen
+        function displayEndScreen() {
+            document.getElementById("gameContainer").style.display = "none";
+            document.getElementById("endScreen").style.display = "flex";
+
+            var result = '';
+            if (game.in_checkmate()) {
+                result = (game.turn() === 'w') ? 'Black wins by checkmate!' : 'White wins by checkmate!';
+            } else if (game.in_stalemate()) {
+                result = 'Stalemate! It\'s a draw!';
+            } else if (game.in_draw()) {
+                result = 'It\'s a draw!';
+            } else {
+                result = 'Game Over!';
+            }
+            document.getElementById("endMessage").innerText = result;
+        }
+
+        // Restart the game
+        function restartGame() {
+            game.reset();
+            board.position('start');
+            document.getElementById("status").innerText = "White to move";
+            document.getElementById("move-history").innerText = "Move History: ";
+            document.getElementById("restartButton").style.display = "none";
+        }
+
+        // Button events
+        document.getElementById('startButton').addEventListener('click', startGame);
+        document.getElementById('restartButton').addEventListener('click', restartGame);
+
+        // Enter key functionality to start game
+        document.getElementById('playerName').addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                startGame();
+            }
+        });
+
+        // Show home screen initially
+        showHomeScreen();
+
+    </script>
+
+</body>
+</html>
